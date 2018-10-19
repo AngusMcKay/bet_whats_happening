@@ -14,18 +14,16 @@ from tqdm import tqdm
 import pymongo
 from pymongo import MongoClient
 import pprint
-
+import os
 
 
 
 # setup api variable
-consumer_key = 'DUVVJmWOX0h44yVhnpPUHnqJt'
-consumer_secret = '3KU9sMsaytPKaPqqX3Hke4ib181VNFPLsHuvCB7PF1hko45dJ9'
-access_token = '1043486621956546560-E5n0SwbabNeYdocH79NWoRQrRI0sHA'
-access_secret = 'CZpkUQhH5aiEIav5a6Gz2UBY6GgMGBpzEufitGNqJggRr'
- 
-auth = OAuthHandler(consumer_key, consumer_secret)
-auth.set_access_token(access_token, access_secret)
+os.chdir('/home/angus/projects/project_templates/20180922_NLPTemplate/src')
+import passwords
+
+auth = OAuthHandler(passwords.consumer_key, passwords.consumer_secret)
+auth.set_access_token(passwords.access_token, passwords.access_secret)
  
 api = tweepy.API(auth, wait_on_rate_limit=True)
 
