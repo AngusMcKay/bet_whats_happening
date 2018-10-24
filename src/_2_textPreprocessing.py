@@ -18,24 +18,25 @@ from nltk.tokenize import wordpunct_tokenize
 from nltk.util import everygrams
 from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import CountVectorizer
 import string
 from collections import Counter
 import re
 
 
 
-# get tweets from db
-# setup connection with mongoDB
-client = MongoClient('mongodb://localhost:27017')
-db=client.tweets
-
-# read tweets
-tweetsOutput = []
-for tweet in tqdm(db.betTweets.find()):
-    tweetsOutput.append([tweet['user_id'],tweet['username'],tweet['text']])
-    
-tweetsDF=pd.DataFrame(tweetsOutput, columns=['user_id','username','text'])
-tweetsNP=np.array(tweetsOutput)
+## get tweets from db
+## setup connection with mongoDB
+#client = MongoClient('mongodb://localhost:27017')
+#db=client.tweets
+#
+## read tweets
+#tweetsOutput = []
+#for tweet in tqdm(db.betTweets.find()):
+#    tweetsOutput.append([tweet['user_id'],tweet['username'],tweet['text']])
+#    
+#tweetsDF=pd.DataFrame(tweetsOutput, columns=['user_id','username','text'])
+#tweetsNP=np.array(tweetsOutput)
 
 
 
@@ -57,15 +58,15 @@ def get_all_tokens(tweet_list):
     tokens = [tok for tok in tokens if not tok in string.punctuation]
     return tokens
 
-tokens = get_all_tokens(tweetsNP[:,2])
-token_lens = ([len(token) for token in tokens])
-tokens[token_lens.index(max(token_lens))]
-
-print('total number of tokens: {}'.format(len(tokens)))
-
-top_grams = Counter(everygrams(tokens, min_len=2, max_len=4))
-
-top_grams.most_common(25)
+#tokens = get_all_tokens(tweetsNP[:,2])
+#token_lens = ([len(token) for token in tokens])
+#tokens[token_lens.index(max(token_lens))]
+#
+#print('total number of tokens: {}'.format(len(tokens)))
+#
+#top_grams = Counter(everygrams(tokens, min_len=2, max_len=4))
+#
+#top_grams.most_common(25)
 
 
 
@@ -84,7 +85,7 @@ def get_tweet_ngrams(tweet_list, min_len=1, max_len=3):
                 )
     return(tweet_grams)
 
-tweet_grams = get_tweet_ngrams(tweetsNP[:,2])
+#tweet_grams = get_tweet_ngrams(tweetsNP[:,2])
 
 
 
@@ -97,8 +98,8 @@ def get_tweets_with_ngram(tweet_list, ngram_to_find):
             tweets_with_ngram.append([t,tweet_list[t]])
     return(tweets_with_ngram)
 
-tweets_with_ngram=get_tweets_with_ngram(tweetsNP[:,2], ('every', 'country', 'in'))
-tweetsNP[[int(x) for x in np.array(tweets_with_ngram)[:,0]],:]
+#tweets_with_ngram=get_tweets_with_ngram(tweetsNP[:,2], ('every', 'country', 'in'))
+#tweetsNP[[int(x) for x in np.array(tweets_with_ngram)[:,0]],:]
 # looks like lots of users who have retweeted the same tweet - remove duplicates
 # want to do this for training phase, but not for prediction phase
 
@@ -106,7 +107,7 @@ tweetsNP[[int(x) for x in np.array(tweets_with_ngram)[:,0]],:]
 
 
 # remove duplicates
-tweetsNonDuplicated = list(set(tweetsNP[:,2]))
+#tweetsNonDuplicated = list(set(tweetsNP[:,2]))
 
 
 # text preprocessing auxiliary functions (to be combined into one function afterwards)
@@ -203,6 +204,46 @@ def text_preprocessor(corpus,
     return processed_corpus
 
 
+
+# dtm generator
+def dtm_preprocessor(doc, url_replacement=None, remove_punctuation=True):
+    """
+    Replace URLs and remove punctuation
+    """
+    replacement = '<-URL->' if url_replacement is None else url_replacement
+    pattern = re.compile('(https?://)?(\w*[.]\w+)+([/?=&]+\w+)*')
+    doc = re.sub(pattern, replacement, doc)
+    
+    filtered_doc = re.sub("[^a-z A-Z]+", "", doc)
+    
+    return filtered_doc
+
+
+def dtm_tokenizer(doc, preserve_case=False, remove_handles=True, reduce_length=True):
+    return TweetTokenizer(preserve_case=preserve_case,
+                          strip_handles=remove_handles,
+                          reduce_len=reduce_length).tokenize(doc)
+
+def dtm_creator(corpus,
+                strip_accents='ascii',
+                preprocessor=dtm_preprocessor,
+                tokenizer=dtm_tokenizer,
+                stop_words=stopwords.words('english'),
+                ngram_range=(1,3),
+                analyzer='word',
+                max_df=1.0,
+                min_df=1):
+    
+    countvec = CountVectorizer(strip_accents=strip_accents,
+                               preprocessor=preprocessor,
+                               tokenizer=tokenizer,
+                               stop_words=stop_words,
+                               ngram_range=ngram_range,
+                               analyzer=analyzer,
+                               max_df=max_df,
+                               min_df=min_df)
+    
+    return countvec(corpus)
 
 
 
